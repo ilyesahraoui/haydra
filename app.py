@@ -111,9 +111,10 @@ def get_os(ua):
     return "Other"
 
 
+
 def notify_discord(browser, os_name, now, total):
     if not WEBHOOK:
-        app.logger.error("DISCORD_WEBHOOK is missing")
+        app.logger.warning("Discord webhook is not configured")
         return
 
     message = (
@@ -133,24 +134,24 @@ def notify_discord(browser, os_name, now, total):
 
         if response.status_code in (200, 204):
             app.logger.info("Discord notification sent")
+
         elif response.status_code == 429:
             app.logger.error(
-                "Discord rate limit. Retry-After: %s",
+                "Discord returned 429. Retry-After=%s. "
+                "Automatic retries are disabled.",
                 response.headers.get("Retry-After", "unknown")
             )
-            app.logger.error(
-                "Response: %s",
-                response.text[:200]
-            )
+
         else:
             app.logger.error(
-                "Discord HTTP %s: %s",
+                "Discord returned HTTP %s. Response type: %s",
                 response.status_code,
-                response.text[:200]
+                response.headers.get("Content-Type", "unknown")
             )
 
     except requests.RequestException:
         app.logger.exception("Discord request failed")
+
 @app.route("/")
 def home():
     ua = request.headers.get("User-Agent", "")
