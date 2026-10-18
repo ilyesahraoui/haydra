@@ -113,18 +113,15 @@ def get_os(ua):
 
 def notify_discord(browser, os_name, now, total):
     if not WEBHOOK:
-        app.logger.error(
-            "DISCORD_WEBHOOK is empty. Check PowerShell."
-        )
+        app.logger.error("DISCORD_WEBHOOK is missing")
         return
 
     message = (
         "📊 زيارة جديدة للموقع\n"
-        "👤 الموقع: Haydra19\n"
-        f"🧭 المتصفح: {browser}\n"
-        f"💻 النظام: {os_name}\n"
-        f"🕒 الوقت: {now}\n"
-        f"📈 إجمالي الزيارات: {total}"
+        f"المتصفح: {browser}\n"
+        f"النظام: {os_name}\n"
+        f"الوقت: {now}\n"
+        f"إجمالي الزيارات: {total}"
     )
 
     try:
@@ -134,19 +131,26 @@ def notify_discord(browser, os_name, now, total):
             timeout=10
         )
 
-        if response.status_code == 204:
-            app.logger.info("Discord notification sent successfully.")
+        if response.status_code in (200, 204):
+            app.logger.info("Discord notification sent")
+        elif response.status_code == 429:
+            app.logger.error(
+                "Discord rate limit. Retry-After: %s",
+                response.headers.get("Retry-After", "unknown")
+            )
+            app.logger.error(
+                "Response: %s",
+                response.text[:200]
+            )
         else:
             app.logger.error(
-                "Discord returned HTTP %s: %s",
+                "Discord HTTP %s: %s",
                 response.status_code,
-                response.text[:300]
+                response.text[:200]
             )
 
     except requests.RequestException:
-        app.logger.exception("Could not send Discord notification.")
-
-
+        app.logger.exception("Discord request failed")
 @app.route("/")
 def home():
     ua = request.headers.get("User-Agent", "")
